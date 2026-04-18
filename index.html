@@ -584,7 +584,7 @@ video { width: 100%; border-radius: 8px; margin-bottom: 10px; display: none; bor
       <span class="sec-num">04 / 06</span>
     </div>
     <div class="sec-body">
-      <div class="photo-meta">Fotos: <span id="fCount">0</span> / 15 &nbsp;·&nbsp; <span id="geoLabel" style="color:var(--dim)">geoloc: aguardando</span></div>
+      <div class="photo-meta">Fotos: <span id="fCount">0</span> / 30 &nbsp;·&nbsp; <span id="geoLabel" style="color:var(--dim)">geoloc: aguardando</span></div>
       <div class="cam-btns">
         <button class="act-btn" onclick="abrirCameraNativa()"><i class="fa-solid fa-camera"></i> Tirar Foto</button>
         <button class="act-btn" onclick="abrirGaleria()"><i class="fa-solid fa-images"></i> Galeria</button>
@@ -869,18 +869,31 @@ buildStars("starsTec",10,"tec","valTec");
 // ── ASSINATURA DIGITAL ───────────────────────────────────
 const sigCanvas=document.getElementById("sigCanvas");
 const sigCtx=sigCanvas.getContext("2d");
-let signing=false, hasSig=false;
+let signing=false, hasSig=false, sigConfirmada=false;
+
+function initSig(){
+  sigCanvas.width  = sigCanvas.offsetWidth || sigCanvas.parentElement.offsetWidth;
+  sigCanvas.height = 160;
+  sigCtx.strokeStyle = "#000";
+  sigCtx.lineWidth   = 2.5;
+  sigCtx.lineCap     = "round";
+  sigCtx.lineJoin    = "round";
+}
 
 function resizeSig(){
-  const rect=sigCanvas.getBoundingClientRect();
-  const prev=sigCtx.getImageData(0,0,sigCanvas.width,sigCanvas.height);
-  sigCanvas.width=rect.width; sigCanvas.height=160;
-  sigCtx.putImageData(prev,0,0);
-  sigCtx.strokeStyle="#000"; sigCtx.lineWidth=2.5;
-  sigCtx.lineCap="round"; sigCtx.lineJoin="round";
+  if(document.getElementById("sigArea").style.display==="none") return;
+  const w = sigCanvas.offsetWidth || sigCanvas.parentElement.offsetWidth;
+  if(!w) return;
+  const prev = sigCtx.getImageData(0,0,sigCanvas.width,sigCanvas.height);
+  sigCanvas.width  = w;
+  sigCanvas.height = 160;
+  sigCtx.strokeStyle = "#000";
+  sigCtx.lineWidth   = 2.5;
+  sigCtx.lineCap     = "round";
+  sigCtx.lineJoin    = "round";
+  try{ sigCtx.putImageData(prev,0,0); }catch(e){}
 }
-resizeSig();
-window.addEventListener("resize",resizeSig);
+window.addEventListener("resize", resizeSig);
 
 // ── PROTEÇÃO CONTRA SAÍDA ACIDENTAL ─────────────────────
 function temDadosPreenchidos(){
@@ -901,35 +914,42 @@ window.addEventListener("beforeunload",function(e){
 function getSigPos(e){
   const r=sigCanvas.getBoundingClientRect();
   const src=e.touches?e.touches[0]:e;
-  return{x:src.clientX-r.left,y:src.clientY-r.top};
+  return{x:src.clientX-r.left, y:src.clientY-r.top};
 }
-
-let sigConfirmada=false;
 
 sigCanvas.addEventListener("pointerdown",e=>{
   if(sigConfirmada)return;
   signing=true; hasSig=true;
-  const p=getSigPos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x,p.y);
+  const p=getSigPos(e);
+  sigCtx.beginPath();
+  sigCtx.moveTo(p.x,p.y);
   e.preventDefault();
 });
 sigCanvas.addEventListener("pointermove",e=>{
   if(!signing||sigConfirmada)return;
-  const p=getSigPos(e); sigCtx.lineTo(p.x,p.y); sigCtx.stroke();
+  const p=getSigPos(e);
+  sigCtx.lineTo(p.x,p.y);
+  sigCtx.stroke();
   e.preventDefault();
 });
 sigCanvas.addEventListener("pointerup",()=>{
-  signing=false; sigCtx.beginPath();
+  signing=false;
+  sigCtx.beginPath();
   if(hasSig&&!sigConfirmada){
     document.getElementById("btnConfirmarSig").disabled=false;
     document.getElementById("btnConfirmarSig").style.opacity="1";
   }
 });
-sigCanvas.addEventListener("pointerleave",()=>{signing=false;sigCtx.beginPath();});
+sigCanvas.addEventListener("pointerleave",()=>{signing=false; sigCtx.beginPath();});
 
 function ativarAssinatura(){
   document.getElementById("sigBloqueio").style.display="none";
   document.getElementById("sigArea").style.display="block";
-  resizeSig();
+  requestAnimationFrame(()=>{
+    requestAnimationFrame(()=>{
+      initSig();
+    });
+  });
 }
 
 function confirmarAssinatura(){
@@ -942,8 +962,8 @@ function confirmarAssinatura(){
   document.getElementById("sigHint").style.color="#22c55e";
 }
 function limparAssinatura(){
-  sigCtx.clearRect(0,0,sigCanvas.width,sigCanvas.height);
   hasSig=false; sigConfirmada=false;
+  initSig();
   document.getElementById("sigOkOverlay").style.display="none";
   const btnConf=document.getElementById("btnConfirmarSig");
   btnConf.style.display=""; btnConf.disabled=true; btnConf.style.opacity="0.5";
@@ -1009,7 +1029,7 @@ function buscarGeo(){
 let fotos=[];
 
 function abrirCameraNativa(){
-  if(fotos.length>=15){toast("Limite de 15 fotos atingido");return;}
+  if(fotos.length>=30){toast("Limite de 30 fotos atingido");return;}
   buscarGeo();
   document.getElementById("cameraNativa").click();
 }
@@ -1021,14 +1041,14 @@ document.getElementById("cameraNativa").onchange=function(e){
 };
 function abrirGaleria(){document.getElementById("galeria").click();}
 document.getElementById("galeria").onchange=function(e){
-  const faltam=15-fotos.length;
+  const faltam=30-fotos.length;
   if(e.target.files.length>faltam)toast(`Apenas ${faltam} foto(s) adicionada(s) — limite atingido`);
   Array.from(e.target.files).slice(0,faltam).forEach(f=>processarImagem(f,false));
   e.target.value="";
 };
 
 function processarImagem(file,comOverlay){
-  if(fotos.length>=15)return;
+  if(fotos.length>=30)return;
   const img=new Image();
   const url=URL.createObjectURL(file);
   img.onload=function(){
@@ -1062,7 +1082,7 @@ function processarImagem(file,comOverlay){
     });
     URL.revokeObjectURL(url);
     mostrarPreview();
-    toast(`Foto ${fotos.length}/15 adicionada`);
+    toast(`Foto ${fotos.length}/30 adicionada`);
   };
   img.onerror=()=>{toast("Erro ao carregar imagem");URL.revokeObjectURL(url);};
   img.src=url;
