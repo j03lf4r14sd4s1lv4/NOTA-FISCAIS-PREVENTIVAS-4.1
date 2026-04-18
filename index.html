@@ -1,0 +1,1302 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SilverNet Tecnologia - Ficha Fiscal</title>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@400;600;700;800&family=Barlow:wght@300;400;500;600&family=Roboto+Mono:wght@400;600&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
+<style>
+:root {
+  --red:      #E50012;
+  --red-dark: #8C000B;
+  --red-glow: rgba(229,0,18,0.13);
+  --bg:       #030303;
+  --s1:       #0A0A0A;
+  --s2:       #111111;
+  --s3:       #181818;
+  --border:   #202020;
+  --border2:  #2C2C2C;
+  --text:     #ECECEC;
+  --dim:      #666;
+  --muted:    #333;
+  --mono:     'Roboto Mono', monospace;
+  --display:  'Barlow Condensed', sans-serif;
+  --body:     'Barlow', sans-serif;
+  --radius:   10px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html { scroll-behavior: smooth; }
+body {
+  font-family: var(--body);
+  background: var(--bg);
+  color: var(--text);
+  min-height: 100vh;
+  padding: 20px 16px 40px;
+}
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.6;
+}
+.container { max-width: 860px; margin: auto; position: relative; z-index: 1; }
+
+/* ── HEADER ─────────────────────────────────── */
+.header {
+  position: relative;
+  background: var(--s1);
+  border: 1px solid var(--border2);
+  border-radius: var(--radius);
+  padding: 0;
+  margin-bottom: 16px;
+  overflow: hidden;
+}
+.header-stripe {
+  height: 4px;
+  background: repeating-linear-gradient(90deg,var(--red) 0,var(--red) 18px,transparent 18px,transparent 24px);
+}
+.header-inner {
+  display: grid;
+  grid-template-columns: 60px 1fr auto;
+  align-items: center;
+  gap: 16px;
+  padding: 18px 22px 18px;
+}
+.header-icon {
+  width: 60px; height: 60px;
+  background: var(--red);
+  border-radius: 8px;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 26px; color: #fff; flex-shrink: 0;
+  box-shadow: 0 4px 20px rgba(229,0,18,0.4);
+}
+.header-title h1 {
+  font-family: var(--display);
+  font-size: 28px; font-weight: 800; letter-spacing: 1px;
+  line-height: 1; text-transform: uppercase;
+}
+.header-title p {
+  font-family: var(--mono);
+  font-size: 10px; color: var(--dim);
+  margin-top: 5px; letter-spacing: 2px; text-transform: uppercase;
+}
+.header-meta {
+  text-align: right;
+  display: flex; flex-direction: column; gap: 5px; align-items: flex-end;
+}
+.badge {
+  display: inline-flex; align-items: center; gap: 5px;
+  background: var(--red-glow);
+  border: 1px solid var(--red-dark);
+  border-radius: 4px; padding: 4px 9px;
+  font-family: var(--mono); font-size: 10px; color: #FF6070; letter-spacing: 1px;
+}
+.badge-gray { background: var(--s3); border: 1px solid var(--border2); color: var(--dim); }
+
+/* ── GEO STATUS ─────────────────────────────── */
+.geo-bar {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--s2);
+  border-bottom: 1px solid var(--border);
+  padding: 8px 22px;
+  font-family: var(--mono); font-size: 10px; color: var(--dim); letter-spacing: 0.5px;
+}
+.geo-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: var(--dim); flex-shrink: 0; transition: background 0.3s;
+}
+.geo-dot.ok  { background: #22c55e; box-shadow: 0 0 6px #22c55e80; }
+.geo-dot.err { background: var(--red); }
+.geo-dot.pulse { background: #f59e0b; animation: gpulse 1.2s infinite; }
+@keyframes gpulse { 0%,100%{opacity:1} 50%{opacity:0.3} }
+
+/* ── SECTIONS ────────────────────────────────── */
+.section {
+  background: var(--s1);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  margin-bottom: 14px;
+  overflow: hidden;
+  animation: fadeUp 0.4s ease both;
+}
+@keyframes fadeUp { from{opacity:0;transform:translateY(12px)} to{opacity:1;transform:translateY(0)} }
+.section:nth-child(2){animation-delay:.05s}
+.section:nth-child(3){animation-delay:.10s}
+.section:nth-child(4){animation-delay:.15s}
+.section:nth-child(5){animation-delay:.20s}
+
+.sec-head {
+  display: flex; align-items: center; gap: 10px;
+  padding: 13px 18px;
+  background: var(--s2);
+  border-bottom: 1px solid var(--border);
+}
+.sec-head i { color: var(--red); font-size: 13px; width: 16px; }
+.sec-head .sec-label {
+  font-family: var(--display); font-size: 13px;
+  font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase;
+}
+.sec-num { margin-left: auto; font-family: var(--mono); font-size: 10px; color: var(--muted); }
+.sec-body { padding: 18px; }
+
+/* ── FIELDS ─────────────────────────────────── */
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.field { display: flex; flex-direction: column; gap: 5px; }
+.field label {
+  font-family: var(--mono); font-size: 9px; color: var(--red);
+  letter-spacing: 2px; text-transform: uppercase;
+}
+.field input, .field textarea {
+  background: var(--bg); border: 1px solid var(--border2);
+  border-radius: 6px; padding: 11px 13px; color: var(--text);
+  font-family: var(--body); font-size: 14px; outline: none;
+  transition: border-color .2s, box-shadow .2s; width: 100%;
+}
+.field input:focus, .field textarea:focus {
+  border-color: var(--red); box-shadow: 0 0 0 3px var(--red-glow);
+}
+.field textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
+
+/* ── SCORE ───────────────────────────────────── */
+.score-wrap {
+  border-top: 1px solid var(--border);
+  background: var(--s2); padding: 10px 18px;
+  display: flex; align-items: center; gap: 12px;
+}
+.score-label { font-family: var(--mono); font-size: 9px; color: var(--dim); letter-spacing: 1px; white-space: nowrap; }
+.score-track { flex: 1; height: 3px; background: var(--border); border-radius: 2px; overflow: hidden; }
+.score-fill  { height: 100%; background: var(--red); transition: width .4s ease, background .4s; width: 0%; border-radius: 2px; }
+.score-val   { font-family: var(--mono); font-size: 13px; font-weight: 600; color: var(--red); min-width: 34px; text-align: right; }
+
+.score-pills { display: none; gap: 6px; flex-wrap: wrap; padding: 8px 18px; background: var(--s2); border-top: 1px solid var(--border); }
+.pill { font-family: var(--mono); font-size: 9px; padding: 3px 10px; border-radius: 20px; letter-spacing: 0.5px; }
+.p-ok  { background: rgba(34,197,94,0.1);  color: #4ade80; border: 1px solid rgba(34,197,94,0.25); }
+.p-no  { background: rgba(229,0,18,0.1);   color: #f87171; border: 1px solid rgba(229,0,18,0.25); }
+.p-na  { background: rgba(120,120,120,0.1); color: #888;   border: 1px solid #333; }
+
+/* ── TABLE ───────────────────────────────────── */
+.ck-table { width: 100%; border-collapse: collapse; }
+.ck-table th {
+  font-family: var(--mono); font-size: 9px; letter-spacing: 2px;
+  text-transform: uppercase; color: var(--muted);
+  padding: 10px 14px; text-align: left; border-bottom: 1px solid var(--border);
+}
+.ck-table th:last-child { text-align: right; }
+.ck-table td {
+  padding: 10px 14px; border-bottom: 1px solid var(--border);
+  font-size: 13px; vertical-align: middle;
+}
+.ck-table tr:last-child td { border-bottom: none; }
+.ck-table td:first-child { font-family: var(--mono); font-size: 10px; color: var(--muted); width: 32px; }
+.ck-table tr { transition: background 0.12s; }
+.ck-table tr:hover td { background: rgba(255,255,255,0.015); }
+.ck-table tr.r-ok td { background: rgba(34,197,94,0.035); }
+.ck-table tr.r-no td { background: rgba(229,0,18,0.035); }
+
+/* ── ITEM LABEL + TOOLTIP WRAPPER ──────────── */
+.item-cell { display: flex; align-items: center; gap: 8px; }
+.item-label { flex: 1; line-height: 1.4; }
+
+/* ── TOOLTIP BUTTON ─────────────────────────── */
+.tip-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 18px; height: 18px; min-width: 18px;
+  border-radius: 50%;
+  border: 1px solid #3a3a3a;
+  background: #1a1a1a;
+  color: #888;
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  cursor: pointer;
+  position: relative;
+  transition: all .18s;
+  user-select: none;
+  flex-shrink: 0;
+}
+.tip-btn:hover,
+.tip-btn.active {
+  background: var(--red-glow);
+  border-color: var(--red);
+  color: #FF6070;
+}
+
+/* ── TOOLTIP BALLOON ─────────────────────────── */
+.tooltip-balloon {
+  display: none;
+  position: absolute;
+  left: 50%;
+  bottom: calc(100% + 10px);
+  transform: translateX(-50%);
+  z-index: 999;
+  width: 260px;
+  background: #141414;
+  border: 1px solid var(--red-dark);
+  border-radius: 8px;
+  padding: 10px 13px;
+  font-family: var(--body);
+  font-size: 12px;
+  font-weight: 400;
+  color: #ccc;
+  line-height: 1.55;
+  box-shadow: 0 8px 28px rgba(0,0,0,0.7);
+  pointer-events: none;
+  white-space: normal;
+}
+/* seta do balão */
+.tooltip-balloon::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  border: 6px solid transparent;
+  border-top-color: var(--red-dark);
+}
+.tooltip-balloon::before {
+  content: '';
+  position: absolute;
+  top: calc(100% + 1px);
+  left: 50%;
+  transform: translateX(-50%);
+  border: 5px solid transparent;
+  border-top-color: #141414;
+  z-index: 1;
+}
+.tip-btn.active .tooltip-balloon,
+.tip-btn:hover .tooltip-balloon {
+  display: block;
+}
+/* cabeçalho dentro do balão */
+.tooltip-balloon strong {
+  display: block;
+  font-family: var(--mono);
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: #FF6070;
+  margin-bottom: 5px;
+}
+
+/* Ajuste para últimas linhas — balão aparece para baixo */
+.tip-up .tooltip-balloon {
+  bottom: auto;
+  top: calc(100% + 10px);
+}
+.tip-up .tooltip-balloon::after {
+  top: auto;
+  bottom: 100%;
+  border-top-color: transparent;
+  border-bottom-color: var(--red-dark);
+}
+.tip-up .tooltip-balloon::before {
+  top: auto;
+  bottom: calc(100% + 1px);
+  border-top-color: transparent;
+  border-bottom-color: #141414;
+}
+
+/* ── STATUS BUTTONS ──────────────────────────── */
+.btn-group { display: flex; gap: 4px; justify-content: flex-end; }
+.status-btn {
+  font-family: var(--mono); font-size: 10px;
+  padding: 5px 10px; border-radius: 20px;
+  cursor: pointer; border: 1px solid var(--border2);
+  background: transparent; color: var(--dim); transition: all .15s;
+}
+.status-btn:hover { border-color: #555; color: var(--text); }
+.s-ok { background: rgba(34,197,94,0.12);  color: #4ade80; border-color: rgba(34,197,94,0.3); }
+.s-no { background: rgba(229,0,18,0.12);   color: #f87171; border-color: rgba(229,0,18,0.3); }
+.s-na { background: rgba(120,120,120,0.12); color: #888;   border-color: #333; }
+
+/* ── CHAR COUNTER ────────────────────────────── */
+.char-c { text-align: right; font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: -8px; margin-bottom: 0; }
+
+/* ── CAMERA ─────────────────────────────────── */
+.cam-btns { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 14px; }
+.act-btn {
+  display: flex; align-items: center; justify-content: center; gap: 8px;
+  background: var(--s2); color: var(--dim);
+  border: 1px dashed var(--border2);
+  padding: 14px; border-radius: 8px; cursor: pointer;
+  font-family: var(--body); font-size: 13px; transition: all .2s;
+}
+.act-btn:hover { border-color: var(--red); color: var(--text); background: var(--red-glow); }
+.act-btn i { font-size: 16px; }
+
+video { width: 100%; border-radius: 8px; margin-bottom: 10px; display: none; border: 1px solid var(--border2); }
+.cap-controls { display: none; gap: 10px; margin-bottom: 12px; }
+.cap-btn {
+  background: var(--red); color: #fff; border: none;
+  padding: 12px 20px; border-radius: 7px; cursor: pointer;
+  font-family: var(--body); font-size: 13px; font-weight: 600; flex: 1; transition: background .2s;
+}
+.cap-btn:hover { background: #C0000F; }
+.cxl-btn {
+  background: var(--s3); color: var(--dim);
+  border: 1px solid var(--border2); padding: 12px 20px;
+  border-radius: 7px; cursor: pointer; font-family: var(--body); font-size: 13px; transition: all .15s;
+}
+.cxl-btn:hover { color: var(--text); border-color: #555; }
+
+.photo-meta { font-family: var(--mono); font-size: 10px; color: var(--dim); margin-bottom: 12px; }
+.photo-meta span { color: #ccc; }
+
+#preview {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(116px, 1fr));
+  gap: 8px; margin-top: 4px;
+}
+.foto-box { position: relative; }
+.foto-box img {
+  width: 100%; height: 108px; object-fit: cover;
+  border-radius: 6px; border: 1px solid var(--border2);
+  cursor: pointer; display: block; transition: opacity .2s, border-color .2s;
+}
+.foto-box img:hover { opacity: 0.82; border-color: var(--red); }
+.foto-label {
+  position: absolute; bottom: 5px; left: 5px;
+  background: rgba(3,3,3,0.78); font-family: var(--mono);
+  font-size: 9px; color: #aaa; padding: 2px 6px; border-radius: 3px;
+}
+.foto-geo {
+  position: absolute; bottom: 5px; right: 5px;
+  background: rgba(3,3,3,0.78); font-family: var(--mono);
+  font-size: 8px; color: #22c55e; padding: 2px 5px; border-radius: 3px;
+}
+.btn-del {
+  position: absolute; top: 5px; right: 5px;
+  background: rgba(229,0,18,0.85); color: #fff;
+  border: none; border-radius: 50%;
+  width: 20px; height: 20px;
+  cursor: pointer; font-size: 9px;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .15s;
+}
+.foto-box:hover .btn-del { opacity: 1; }
+
+/* ── MAIN BTN ────────────────────────────────── */
+.main-btn {
+  width: 100%; background: var(--red); color: #fff;
+  padding: 17px; border: none; border-radius: 8px;
+  font-family: var(--display); font-size: 19px; font-weight: 700;
+  letter-spacing: 2.5px; text-transform: uppercase;
+  cursor: pointer; margin-top: 18px;
+  display: flex; align-items: center; justify-content: center; gap: 10px;
+  transition: all .2s; position: relative; overflow: hidden;
+}
+.main-btn::after {
+  content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%;
+  background: linear-gradient(90deg,transparent,rgba(255,255,255,0.09),transparent);
+  transition: left .5s;
+}
+.main-btn:hover::after { left: 100%; }
+.main-btn:hover { background: #C0000F; box-shadow: 0 6px 24px rgba(229,0,18,0.35); transform: translateY(-1px); }
+.main-btn:active { transform: scale(0.99); }
+
+/* ── TOAST ───────────────────────────────────── */
+.toast {
+  position: fixed; bottom: 26px; right: 22px;
+  background: var(--s1); border: 1px solid var(--border2);
+  border-left: 3px solid var(--red);
+  padding: 10px 16px; border-radius: 8px;
+  font-size: 13px; color: var(--text);
+  opacity: 0; transform: translateY(8px);
+  transition: all .25s; z-index: 999;
+  max-width: 300px; pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+
+/* ── LIGHTBOX ────────────────────────────────── */
+#visualizador {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,0.97);
+  display: none; align-items: center; justify-content: center;
+  z-index: 9999; backdrop-filter: blur(4px);
+}
+#visualizador.open { display: flex; }
+#visualizador img { max-width: 90%; max-height: 90%; border-radius: 8px; border: 1px solid var(--border2); }
+#fecharVis { position: absolute; top: 20px; right: 26px; font-size: 26px; cursor: pointer; color: var(--dim); transition: color .2s; }
+#fecharVis:hover { color: var(--red); }
+
+/* ── STARS ──────────────────────────────────── */
+.stars-wrap { display: flex; gap: 20px; flex-wrap: wrap; }
+.star-group { flex: 1; min-width: 140px; }
+.star-group .slabel {
+  font-family: var(--mono); font-size: 9px; color: var(--dim);
+  letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; display: block;
+}
+.stars { display: flex; gap: 4px; flex-wrap: wrap; }
+.star {
+  font-size: 26px; cursor: pointer; color: var(--muted);
+  transition: color .15s, transform .1s; user-select: none; line-height: 1;
+}
+.star:hover { transform: scale(1.15); }
+.star.on { color: #F5C518; }
+.star-val { font-family: var(--mono); font-size: 11px; color: var(--dim); margin-top: 6px; }
+
+/* ── SIGNATURE ───────────────────────────────── */
+#sigCanvas {
+  width: 100%; height: 160px;
+  background: #fff; border-radius: 6px;
+  border: 1px solid var(--border2); cursor: crosshair; display: block; touch-action: none;
+}
+.sig-controls { display: flex; gap: 8px; margin-top: 10px; }
+.sig-clear {
+  background: var(--s3); color: var(--dim);
+  border: 1px solid var(--border2); padding: 8px 16px;
+  border-radius: 6px; cursor: pointer;
+  font-family: var(--mono); font-size: 10px; letter-spacing: 1px; text-transform: uppercase; transition: all .15s;
+}
+.sig-clear:hover { color: var(--text); border-color: #555; }
+.sig-hint { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 6px; }
+
+@media (max-width: 580px) {
+  .header-inner { grid-template-columns: 50px 1fr; }
+  .header-meta  { display: none; }
+  .grid2 { grid-template-columns: 1fr; }
+  .cam-btns { grid-template-columns: 1fr; }
+  .tooltip-balloon { width: 210px; }
+}
+</style>
+</head>
+<body>
+
+<div class="container">
+
+  <!-- HEADER -->
+  <div class="section header" style="margin-bottom:16px">
+    <div class="header-stripe"></div>
+    <div class="header-inner">
+      <div class="header-icon">
+        <svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" viewBox="0 0 24 24" fill="white">
+          <circle cx="12" cy="12" r="11" fill="none" stroke="white" stroke-width="1.2"/>
+          <path d="M12 5.5C10.07 5.5 8.5 7.07 8.5 9v6c0 1.93 1.57 3.5 3.5 3.5s3.5-1.57 3.5-3.5V9c0-1.93-1.57-3.5-3.5-3.5zm.5 5h-1V7h1v3.5z"/>
+        </svg>
+      </div>
+      <div class="header-title">
+        <h1>SilverNet Tecnologia</h1>
+        <p>Ficha Fiscal Técnica · Documento Digital</p>
+      </div>
+      <div class="header-meta">
+        <span class="badge"><i class="fa-solid fa-circle" style="font-size:7px"></i> ATIVO</span>
+        <span class="badge badge-gray">v3.1</span>
+      </div>
+    </div>
+    <div class="geo-bar" id="geoBar">
+      <span class="geo-dot" id="geoDot"></span>
+      <span id="geoTxt">Geolocalização não ativada</span>
+      <button id="btnAtivargeo" onclick="ativarGeo()" style="margin-left:auto;background:var(--red);color:#fff;border:none;border-radius:5px;padding:4px 12px;font-family:var(--mono);font-size:9px;letter-spacing:1px;cursor:pointer;display:flex;align-items:center;gap:5px;text-transform:uppercase;">
+        <i class="fa-solid fa-location-crosshairs"></i> Ativar GPS
+      </button>
+    </div>
+  </div>
+
+  <!-- 01 DADOS -->
+  <div class="section">
+    <div class="sec-head">
+      <i class="fa-solid fa-id-card"></i>
+      <span class="sec-label">Dados da Visita</span>
+      <span class="sec-num">01 / 06</span>
+    </div>
+    <div class="sec-body">
+      <div class="grid2">
+        <div class="field"><label>Nome do Cliente</label><input id="cliente" placeholder="Ex: João da Silva"></div>
+        <div class="field"><label>Nome do Técnico</label>
+          <input id="tecnico" placeholder="Digite ou selecione o técnico" list="listaTecnicos" autocomplete="off">
+          <datalist id="listaTecnicos">
+            <option value="JEFERSON DE ARAUJO SILVA">
+            <option value="LUCCAS DE OLIVEIRA FEITOSA">
+            <option value="ALEXANDRE VENTURA DOS SANTOS">
+            <option value="VALMI APARECIDO CAETANO">
+            <option value="THIAGO FELIPE DE ALMEIDA MIZUBUTTI">
+            <option value="ALEXANDRE LIMA AUGUSTO">
+            <option value="JONNATHAN LAZARO DOS SANTOS">
+            <option value="THIAGO DIAS TEIXEIRA">
+            <option value="WALLACE ANDRADE FERREIRA">
+            <option value="JEAN DOS SANTOS LOPES">
+            <option value="PAULO HENRIQUE FELIZARDO DA SILVA">
+          </datalist>
+        </div>
+        <div class="field"><label>Fiscal do Dia</label><input id="fiscal" placeholder="Ex: Ana Lima"></div>
+        <div class="field"><label>Data da Visita</label><input type="date" id="data"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 02 CHECKLIST -->
+  <div class="section">
+    <div class="sec-head">
+      <i class="fa-solid fa-list-check"></i>
+      <span class="sec-label">Checklist de Verificação</span>
+      <span class="sec-num">02 / 06</span>
+    </div>
+    <table class="ck-table">
+      <thead>
+        <tr>
+          <th>#</th><th>Verificação</th><th style="text-align:right">Status</th>
+        </tr>
+      </thead>
+      <tbody id="tabela"></tbody>
+    </table>
+    <div class="score-pills" id="pills">
+      <span class="pill p-ok" id="pOk"></span>
+      <span class="pill p-no" id="pNo"></span>
+      <span class="pill p-na" id="pNa"></span>
+    </div>
+    <div class="score-wrap">
+      <span class="score-label">CONFORMIDADE</span>
+      <div class="score-track"><div class="score-fill" id="sFill"></div></div>
+      <span class="score-val" id="sVal">—</span>
+    </div>
+  </div>
+
+  <!-- 03 OBSERVAÇÕES -->
+  <div class="section">
+    <div class="sec-head">
+      <i class="fa-solid fa-file-lines"></i>
+      <span class="sec-label">Observações</span>
+      <span class="sec-num">03 / 06</span>
+    </div>
+    <div class="sec-body">
+      <div class="field">
+        <label>Registro do Fiscal</label>
+        <textarea id="observacoes" maxlength="3000" placeholder="Registre ocorrências, pendências ou observações relevantes..."></textarea>
+      </div>
+      <div class="char-c"><span id="cObs">0</span> / 3000</div>
+    </div>
+  </div>
+
+  <!-- 04 FOTOS -->
+  <div class="section">
+    <div class="sec-head">
+      <i class="fa-solid fa-camera"></i>
+      <span class="sec-label">Registro Fotográfico</span>
+      <span class="sec-num">04 / 06</span>
+    </div>
+    <div class="sec-body">
+      <div class="photo-meta">Fotos: <span id="fCount">0</span> / 15 &nbsp;·&nbsp; <span id="geoLabel" style="color:var(--dim)">geoloc: aguardando</span></div>
+      <div class="cam-btns">
+        <button class="act-btn" onclick="abrirCameraNativa()"><i class="fa-solid fa-camera"></i> Tirar Foto</button>
+        <button class="act-btn" onclick="abrirGaleria()"><i class="fa-solid fa-images"></i> Galeria</button>
+      </div>
+      <input type="file" id="cameraNativa" accept="image/*" capture="environment" style="display:none">
+      <input type="file" id="galeria" accept="image/*" multiple style="display:none">
+      <canvas id="canvas" style="display:none"></canvas>
+      <div id="preview"></div>
+    </div>
+  </div>
+
+  <!-- 05 AVALIAÇÃO -->
+  <div class="section">
+    <div class="sec-head">
+      <i class="fa-solid fa-star"></i>
+      <span class="sec-label">Avaliação do Atendimento</span>
+      <span class="sec-num">05 / 06</span>
+    </div>
+    <div class="sec-body">
+      <div class="stars-wrap">
+        <div class="star-group">
+          <span class="slabel">Nota da Empresa (1 a 5)</span>
+          <div class="stars" id="starsEmp"></div>
+          <div class="star-val" id="valEmp">Não avaliado</div>
+        </div>
+        <div class="star-group">
+          <span class="slabel">Atendimento / Suporte (1 a 10)</span>
+          <div class="stars" id="starsAten"></div>
+          <div class="star-val" id="valAten">Não avaliado</div>
+        </div>
+        <div class="star-group">
+          <span class="slabel">Nota do Técnico (1 a 10)</span>
+          <div class="stars" id="starsTec"></div>
+          <div class="star-val" id="valTec">Não avaliado</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- 06 ASSINATURA -->
+  <div class="section">
+    <div class="sec-head">
+      <i class="fa-solid fa-signature"></i>
+      <span class="sec-label">Assinatura Digital do Cliente</span>
+      <span class="sec-num">06 / 06</span>
+    </div>
+    <div class="sec-body">
+      <!-- Botão de ativar assinatura -->
+      <div id="sigBloqueio" style="text-align:center;padding:28px 0 20px;">
+        <button onclick="ativarAssinatura()" style="background:var(--red);color:#fff;border:none;border-radius:8px;padding:14px 32px;font-family:var(--display);font-size:16px;font-weight:700;letter-spacing:2px;text-transform:uppercase;cursor:pointer;display:inline-flex;align-items:center;gap:10px;transition:all .2s;">
+          <i class="fa-solid fa-pen-nib"></i> Ativar Assinatura
+        </button>
+        <div style="font-family:var(--mono);font-size:10px;color:var(--dim);margin-top:10px;letter-spacing:1px;">Clique para liberar o campo de assinatura do cliente</div>
+      </div>
+
+      <!-- Canvas (oculto até ativar) -->
+      <div id="sigArea" style="display:none">
+        <div style="position:relative">
+          <canvas id="sigCanvas"></canvas>
+          <div id="sigOkOverlay" style="display:none;position:absolute;inset:0;background:rgba(34,197,94,0.12);border-radius:6px;border:2px solid #22c55e;pointer-events:none;align-items:center;justify-content:center;flex-direction:column;gap:6px;">
+            <i class="fa-solid fa-circle-check" style="font-size:40px;color:#22c55e"></i>
+            <span style="font-family:var(--mono);font-size:11px;color:#22c55e;letter-spacing:1px">ASSINATURA CONFIRMADA</span>
+          </div>
+        </div>
+        <div class="sig-controls">
+          <button class="sig-clear" id="btnConfirmarSig" onclick="confirmarAssinatura()" style="background:var(--red);color:#fff;border:none;opacity:0.4;cursor:not-allowed;" disabled>
+            <i class="fa-solid fa-check"></i> Confirmar Assinatura
+          </button>
+          <button class="sig-clear" id="btnLimparSig" onclick="limparAssinatura()">
+            <i class="fa-solid fa-eraser"></i> Limpar
+          </button>
+        </div>
+        <div class="sig-hint" id="sigHint">Assine acima com o dedo ou mouse para confirmar o atendimento</div>
+      </div>
+    </div>
+  </div>
+
+  <button onclick="gerarPDF()" class="main-btn" id="btnPDF">
+    <i class="fa-solid fa-file-export"></i>
+    Gerar &amp; Compartilhar PDF
+  </button>
+
+</div>
+
+<div id="visualizador">
+  <span id="fecharVis" onclick="fecharVis()"><i class="fa-solid fa-xmark"></i></span>
+  <img id="imgVis">
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+// ── CHECKLIST COM TOOLTIPS ──────────────────────────────
+const verificacoes = [
+  {
+    label: "Acomodação da fibra na CTO",
+    tip: "Verificar se a caixa está com splitter instalado corretamente (OK) ou se está organizada com rolinho e plaqueta de identificação."
+  },
+  {
+    label: "Identificação do DROP",
+    tip: "Verificar se o cabo do cliente está identificado com anilha numerada ou com lacre de identificação."
+  },
+  {
+    label: "CTO correta conforme projeto",
+    tip: "Verificar se a caixa utilizada é a mesma registrada no sistema — ou seja, a CTO que consta na facilidade do cliente."
+  },
+  {
+    label: "Identificação da CTO",
+    tip: "Verificar se o cliente está na porta correta da CTO, conforme registrado no sistema."
+  },
+  {
+    label: "Organização interna da CTO",
+    tip: "Verificar se não há pontas de cabo cortado soltas dentro da caixa e se não existem conectores de cabos abandonados no interior."
+  },
+  {
+    label: "Trajeto do DROP",
+    tip: "Verificar se o cabo DROP está posicionado com cunhas altas e nos suportes dos postes ao longo de todo o trajeto."
+  },
+  {
+    label: "Fixação em fachada",
+    tip: "Verificar se a fixação na fachada está realizada com suporte DM ou com PTR (presilha tipo roldana)."
+  },
+  {
+    label: "Entrada do cabo na residência",
+    tip: "Verificar se o cabo está completamente fixado na residência, sem pontos soltos ou mal presos."
+  },
+  {
+    label: "Instalação do PTO ou Alta Fusão",
+    tip: "Verificar conforme o tipo de visita: se for visita de fiscalização feita diretamente ao cliente, conferir a instalação do PTO ou da alta fusão no local."
+  },
+  {
+    label: "Teste WiFi e IPv6",
+    tip: "Verificar conforme a situação: se a visita for acompanhada do técnico, realizar o teste no local; se for visita de auditoria, verificar os resultados no sistema."
+  },
+  {
+    label: "Parâmetros da fibra",
+    tip: "Verificar conforme a situação: se a visita for com o técnico no local, conferir os parâmetros presencialmente; se for auditoria, verificar no sistema."
+  },
+  {
+    label: "Cliente orientado sobre WiFi",
+    tip: "Verificar somente em visitas realizadas com o técnico presente: confirmar se o cliente foi devidamente orientado sobre o uso e configurações do WiFi."
+  },
+  {
+    label: "Organização geral da instalação",
+    tip: "Verificar se o cabo está fixado corretamente na residência do cliente e se a caixa está organizada — sem folgas, sem excesso de cabo e sem bagunça."
+  },
+  {
+    label: "Uso de EPI pelo técnico",
+    tip: "Verificar somente quando a visita for realizada com o técnico no local: confirmar se o técnico está utilizando os Equipamentos de Proteção Individual necessários."
+  },
+  {
+    label: "Registro fotográfico",
+    tip: "Verificar somente em visitas de auditoria: conferir no sistema de arquivos do cliente se as fotos estão registradas na ordem correta e completas."
+  },
+  {
+    label: "Qualidade final da instalação",
+    tip: "Verificar se não há lixo ou resíduos na porta do cliente nem no caminho até a caixa CTO — a área deve estar limpa após a execução do serviço."
+  }
+];
+
+// Índices dos últimos 4 itens — balão aparece para baixo (evitar corte no topo)
+const tipUpIndices = new Set([12, 13, 14, 15]);
+
+const tabela = document.getElementById("tabela");
+
+verificacoes.forEach((v, i) => {
+  const isUp = tipUpIndices.has(i);
+  const tr = document.createElement("tr");
+  tr.innerHTML = `
+    <td>${String(i+1).padStart(2,"0")}</td>
+    <td>
+      <div class="item-cell">
+        <span class="item-label">${v.label}</span>
+        <span class="tip-btn${isUp?' tip-up':''}" tabindex="0" aria-label="Informação sobre ${v.label}">
+          ?
+          <span class="tooltip-balloon">
+            <strong>O que verificar</strong>
+            ${v.tip}
+          </span>
+        </span>
+      </div>
+    </td>
+    <td>
+      <div class="btn-group">
+        <button class="status-btn" data-v="Sim" onclick="sel(this,${i})">Sim</button>
+        <button class="status-btn" data-v="Não" onclick="sel(this,${i})">Não</button>
+        <button class="status-btn" data-v="N/A" onclick="sel(this,${i})">N/A</button>
+      </div>
+    </td>`;
+  tabela.appendChild(tr);
+});
+
+// Toggle no mobile (toque)
+document.querySelectorAll(".tip-btn").forEach(btn => {
+  btn.addEventListener("click", e => {
+    e.stopPropagation();
+    const isActive = btn.classList.contains("active");
+    document.querySelectorAll(".tip-btn.active").forEach(b => b.classList.remove("active"));
+    if (!isActive) btn.classList.add("active");
+  });
+  btn.addEventListener("keydown", e => {
+    if(e.key === "Enter" || e.key === " ") {
+      e.preventDefault();
+      btn.click();
+    }
+  });
+});
+document.addEventListener("click", () => {
+  document.querySelectorAll(".tip-btn.active").forEach(b => b.classList.remove("active"));
+});
+
+function sel(btn, i) {
+  const row = tabela.rows[i];
+  row.querySelectorAll(".status-btn").forEach(b => b.className = "status-btn");
+  const v = btn.dataset.v;
+  btn.classList.add(v==="Sim"?"s-ok":v==="Não"?"s-no":"s-na");
+  row.className = v==="Sim"?"r-ok":v==="Não"?"r-no":"";
+  score();
+}
+
+function score() {
+  let ok=0,no=0,na=0;
+  tabela.querySelectorAll("tr").forEach(tr=>{
+    if(tr.querySelector(".s-ok"))ok++;
+    else if(tr.querySelector(".s-no"))no++;
+    else if(tr.querySelector(".s-na"))na++;
+  });
+  const total=ok+no;
+  const pills=document.getElementById("pills");
+  if(total>0||na>0){
+    pills.style.display="flex";
+    document.getElementById("pOk").textContent=`✓ ${ok} Conforme`;
+    document.getElementById("pNo").textContent=`✗ ${no} Não Conforme`;
+    document.getElementById("pNa").textContent=`– ${na} N/A`;
+  }
+  const fill=document.getElementById("sFill");
+  const val =document.getElementById("sVal");
+  if(!total){fill.style.width="0%";val.textContent="—";return;}
+  const pct=Math.round((ok/total)*100);
+  fill.style.width=pct+"%";
+  const clr=pct>=80?"#22c55e":pct>=50?"#f59e0b":"#ef4444";
+  fill.style.background=clr;
+  val.textContent=pct+"%"; val.style.color=clr;
+}
+
+// ── ESTRELAS ────────────────────────────────────────────
+let notaTec=0, notaEmp=0, notaAten=0;
+
+function buildStars(containerId, max, varName, valId) {
+  const wrap=document.getElementById(containerId);
+  for(let i=1;i<=max;i++){
+    const s=document.createElement("span");
+    s.className="star"; s.dataset.val=i; s.innerHTML="★";
+    s.addEventListener("click",()=>{
+      if(varName==="tec")notaTec=i;
+      else if(varName==="emp")notaEmp=i;
+      else notaAten=i;
+      updateStars(containerId,i,valId,max);
+    });
+    s.addEventListener("mouseenter",()=>paintStars(containerId,i));
+    s.addEventListener("mouseleave",()=>{
+      const cur=varName==="tec"?notaTec:varName==="emp"?notaEmp:notaAten;
+      paintStars(containerId,cur);
+    });
+    wrap.appendChild(s);
+  }
+}
+
+function paintStars(id,val){
+  document.querySelectorAll(`#${id} .star`).forEach((s,i)=>s.classList.toggle("on",i<val));
+}
+function updateStars(id,val,valId,max){
+  paintStars(id,val);
+  const el=document.getElementById(valId);
+  el.textContent=val+" / "+max+" estrela"+(val>1?"s":"");
+  el.style.color=val>=max*0.8?"#22c55e":val>=max*0.5?"#f59e0b":"#f87171";
+}
+
+buildStars("starsEmp",5,"emp","valEmp");
+buildStars("starsAten",10,"aten","valAten");
+buildStars("starsTec",10,"tec","valTec");
+
+// ── ASSINATURA DIGITAL ───────────────────────────────────
+const sigCanvas=document.getElementById("sigCanvas");
+const sigCtx=sigCanvas.getContext("2d");
+let signing=false, hasSig=false;
+
+function resizeSig(){
+  const rect=sigCanvas.getBoundingClientRect();
+  const prev=sigCtx.getImageData(0,0,sigCanvas.width,sigCanvas.height);
+  sigCanvas.width=rect.width; sigCanvas.height=160;
+  sigCtx.putImageData(prev,0,0);
+  sigCtx.strokeStyle="#000"; sigCtx.lineWidth=2.5;
+  sigCtx.lineCap="round"; sigCtx.lineJoin="round";
+}
+resizeSig();
+window.addEventListener("resize",resizeSig);
+
+// ── PROTEÇÃO CONTRA SAÍDA ACIDENTAL ─────────────────────
+function temDadosPreenchidos(){
+  const cliente=document.getElementById("cliente").value.trim();
+  const tecnico=document.getElementById("tecnico").value.trim();
+  const obs=document.getElementById("observacoes").value.trim();
+  const temChecklist=tabela&&tabela.querySelector(".s-ok,.s-no,.s-na");
+  return cliente||tecnico||obs||temChecklist||fotos.length>0||hasSig;
+}
+window.addEventListener("beforeunload",function(e){
+  if(temDadosPreenchidos()){
+    e.preventDefault();
+    e.returnValue="Você tem dados preenchidos. Tem certeza que quer sair? As informações serão perdidas.";
+    return e.returnValue;
+  }
+});
+
+function getSigPos(e){
+  const r=sigCanvas.getBoundingClientRect();
+  const src=e.touches?e.touches[0]:e;
+  return{x:src.clientX-r.left,y:src.clientY-r.top};
+}
+
+let sigConfirmada=false;
+
+sigCanvas.addEventListener("pointerdown",e=>{
+  if(sigConfirmada)return;
+  signing=true; hasSig=true;
+  const p=getSigPos(e); sigCtx.beginPath(); sigCtx.moveTo(p.x,p.y);
+  e.preventDefault();
+});
+sigCanvas.addEventListener("pointermove",e=>{
+  if(!signing||sigConfirmada)return;
+  const p=getSigPos(e); sigCtx.lineTo(p.x,p.y); sigCtx.stroke();
+  e.preventDefault();
+});
+sigCanvas.addEventListener("pointerup",()=>{
+  signing=false; sigCtx.beginPath();
+  if(hasSig&&!sigConfirmada){
+    document.getElementById("btnConfirmarSig").disabled=false;
+    document.getElementById("btnConfirmarSig").style.opacity="1";
+  }
+});
+sigCanvas.addEventListener("pointerleave",()=>{signing=false;sigCtx.beginPath();});
+
+function ativarAssinatura(){
+  document.getElementById("sigBloqueio").style.display="none";
+  document.getElementById("sigArea").style.display="block";
+  resizeSig();
+}
+
+function confirmarAssinatura(){
+  if(!hasSig)return;
+  sigConfirmada=true;
+  document.getElementById("sigOkOverlay").style.display="flex";
+  document.getElementById("btnConfirmarSig").style.display="none";
+  document.getElementById("btnLimparSig").innerHTML='<i class="fa-solid fa-rotate-left"></i> Refazer';
+  document.getElementById("sigHint").textContent="✓ Assinatura confirmada com sucesso";
+  document.getElementById("sigHint").style.color="#22c55e";
+}
+function limparAssinatura(){
+  sigCtx.clearRect(0,0,sigCanvas.width,sigCanvas.height);
+  hasSig=false; sigConfirmada=false;
+  document.getElementById("sigOkOverlay").style.display="none";
+  const btnConf=document.getElementById("btnConfirmarSig");
+  btnConf.style.display=""; btnConf.disabled=true; btnConf.style.opacity="0.5";
+  document.getElementById("btnLimparSig").innerHTML='<i class="fa-solid fa-eraser"></i> Limpar';
+  document.getElementById("sigHint").textContent="Assine acima com o dedo ou mouse para confirmar o atendimento";
+  document.getElementById("sigHint").style.color="";
+}
+
+// ── OBSERVAÇÕES ──
+document.getElementById("observacoes").addEventListener("input",function(){
+  document.getElementById("cObs").textContent=this.value.length;
+});
+
+// ── GEO ──────────────────────────────────────────────
+let enderecoFoto="", geoCoords=null;
+
+function setGeo(state,txt){
+  const dot=document.getElementById("geoDot");
+  const el=document.getElementById("geoTxt");
+  dot.className="geo-dot "+state; el.textContent=txt;
+  document.getElementById("geoLabel").textContent="geoloc: "+(state==="ok"?"ativo ✓":state==="err"?"erro":"aguardando");
+  document.getElementById("geoLabel").style.color=state==="ok"?"#22c55e":state==="err"?"#f87171":"var(--dim)";
+}
+function ativarGeo(){buscarGeo();}
+function buscarGeo(){
+  if(!navigator.geolocation){setGeo("err","Geolocalização não suportada");return;}
+  setGeo("pulse","Obtendo localização...");
+  const btnGeo=document.getElementById("btnAtivargeo");
+  if(btnGeo){btnGeo.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Buscando...';btnGeo.disabled=true;}
+  navigator.geolocation.getCurrentPosition(async pos=>{
+    const lat=pos.coords.latitude.toFixed(6);
+    const lon=pos.coords.longitude.toFixed(6);
+    geoCoords={lat,lon};
+    try{
+      const r=await fetch(`https://nominatim.openstreetmap.org/reverse?lat=${lat}&lon=${lon}&format=json`);
+      const d=await r.json();
+      enderecoFoto=d.display_name||`${lat}, ${lon}`;
+      const curto=enderecoFoto.length>60?enderecoFoto.substring(0,60)+"…":enderecoFoto;
+      setGeo("ok",curto);
+      if(btnGeo){btnGeo.innerHTML='<i class="fa-solid fa-location-dot"></i> GPS Ativo';btnGeo.style.background='#22c55e';btnGeo.disabled=true;}
+    }catch{
+      enderecoFoto=`Lat:${lat} Lon:${lon}`;
+      setGeo("ok",enderecoFoto);
+      if(btnGeo){btnGeo.innerHTML='<i class="fa-solid fa-location-dot"></i> GPS Ativo';btnGeo.style.background='#22c55e';btnGeo.disabled=true;}
+    }
+  },(err)=>{
+    const isHttps=location.protocol==='https:'||location.hostname==='localhost';
+    const msg=!isHttps
+      ?"GPS requer HTTPS — funciona normalmente no site online"
+      :err.code===1
+        ?"Permissão negada — libere o GPS nas configurações do navegador"
+        :"Não foi possível obter localização — tente novamente";
+    setGeo("err",msg);
+    if(btnGeo){
+      btnGeo.innerHTML=!isHttps?'<i class="fa-solid fa-lock"></i> Requer HTTPS':'<i class="fa-solid fa-location-crosshairs"></i> Tentar Novamente';
+      btnGeo.disabled=!isHttps;
+      if(!isHttps)btnGeo.style.background='#555';
+    }
+  });
+}
+
+// ── CÂMERA NATIVA ────────────────────────────────────
+let fotos=[];
+
+function abrirCameraNativa(){
+  if(fotos.length>=15){toast("Limite de 15 fotos atingido");return;}
+  buscarGeo();
+  document.getElementById("cameraNativa").click();
+}
+document.getElementById("cameraNativa").onchange=function(e){
+  const file=e.target.files[0];
+  if(!file)return;
+  processarImagem(file,true);
+  e.target.value="";
+};
+function abrirGaleria(){document.getElementById("galeria").click();}
+document.getElementById("galeria").onchange=function(e){
+  const faltam=15-fotos.length;
+  if(e.target.files.length>faltam)toast(`Apenas ${faltam} foto(s) adicionada(s) — limite atingido`);
+  Array.from(e.target.files).slice(0,faltam).forEach(f=>processarImagem(f,false));
+  e.target.value="";
+};
+
+function processarImagem(file,comOverlay){
+  if(fotos.length>=15)return;
+  const img=new Image();
+  const url=URL.createObjectURL(file);
+  img.onload=function(){
+    const canvas=document.getElementById("canvas");
+    canvas.width=img.naturalWidth||img.width;
+    canvas.height=img.naturalHeight||img.height;
+    const ctx=canvas.getContext("2d");
+    ctx.drawImage(img,0,0);
+    if(comOverlay){
+      const agora=new Date();
+      const hora=agora.toLocaleTimeString("pt-BR");
+      const data=agora.toLocaleDateString("pt-BR");
+      const endCurto=enderecoFoto?enderecoFoto.substring(0,70):"Sem localização";
+      const overlayH=Math.round(canvas.height*0.1);
+      const fs=Math.round(overlayH*0.28);
+      ctx.fillStyle="rgba(0,0,0,0.62)";
+      ctx.fillRect(0,canvas.height-overlayH,canvas.width,overlayH);
+      ctx.fillStyle="#E50012";
+      ctx.fillRect(0,canvas.height-overlayH,Math.round(canvas.width*0.012),overlayH);
+      ctx.fillStyle="#fff"; ctx.font=`bold ${fs*1.1}px Arial`;
+      ctx.fillText(hora,fs,canvas.height-overlayH*0.55);
+      ctx.font=`${fs}px Arial`; ctx.fillStyle="#ddd";
+      ctx.fillText(data,fs,canvas.height-overlayH*0.28);
+      ctx.font=`${fs*0.85}px Arial`; ctx.fillStyle="#aaa";
+      ctx.fillText(endCurto,fs,canvas.height-overlayH*0.06);
+    }
+    fotos.push({
+      data:canvas.toDataURL("image/jpeg",0.88),
+      endereco:comOverlay?enderecoFoto:"",
+      hora:comOverlay?new Date().toLocaleString("pt-BR"):""
+    });
+    URL.revokeObjectURL(url);
+    mostrarPreview();
+    toast(`Foto ${fotos.length}/15 adicionada`);
+  };
+  img.onerror=()=>{toast("Erro ao carregar imagem");URL.revokeObjectURL(url);};
+  img.src=url;
+}
+
+function mostrarPreview(){
+  const p=document.getElementById("preview");
+  p.innerHTML="";
+  fotos.forEach((foto,i)=>{
+    const d=document.createElement("div");
+    d.className="foto-box";
+    const temGeo=foto.endereco&&foto.endereco.length>0;
+    d.innerHTML=`
+      <img src="${foto.data}" onclick="abrirVis(${i})">
+      <span class="foto-label">${String(i+1).padStart(2,"0")}</span>
+      ${temGeo?`<span class="foto-geo"><i class="fa-solid fa-location-dot" style="font-size:8px"></i></span>`:""}
+      <button class="btn-del" onclick="delFoto(${i})"><i class="fa-solid fa-xmark"></i></button>`;
+    p.appendChild(d);
+  });
+  document.getElementById("fCount").textContent=fotos.length;
+}
+
+function delFoto(i){fotos.splice(i,1);mostrarPreview();}
+function abrirVis(i){document.getElementById("imgVis").src=fotos[i].data;document.getElementById("visualizador").classList.add("open");}
+function fecharVis(){document.getElementById("visualizador").classList.remove("open");}
+
+// ── TOAST ──
+function toast(msg){
+  const el=document.getElementById("toast");
+  el.textContent=msg; el.classList.add("show");
+  setTimeout(()=>el.classList.remove("show"),2800);
+}
+
+// ── COLETA ──
+function coletarStatus(){
+  const m={};
+  tabela.querySelectorAll("tr").forEach((tr,i)=>{
+    m[i]=tr.querySelector(".s-ok")?"Sim":tr.querySelector(".s-no")?"Não":tr.querySelector(".s-na")?"N/A":"—";
+  });
+  return m;
+}
+
+// ── COMPARTILHAR ──
+async function compartilharPDF(doc){
+  let tec=document.getElementById("tecnico").value.trim()||"Tecnico";
+  let cli=document.getElementById("cliente").value.trim()||"Cliente";
+  let dat=document.getElementById("data").value||"Data";
+  const nome=(tec+"_"+cli+"_"+dat).replace(/\s+/g,"_").replace(/[^a-zA-Z0-9_\-]/g,"_")+".pdf";
+  const blob=doc.output("blob");
+  const file=new File([blob],nome,{type:"application/pdf"});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    try{await navigator.share({title:"Relatório de Instalação",text:"Relatório Fibra PRO",files:[file]});}
+    catch(e){if(e.name!=="AbortError")doc.save(nome);}
+  }else{doc.save(nome);}
+}
+
+// ── GERAR PDF ──────────────────────────────────────────
+async function gerarPDF(){
+  const btn=document.getElementById("btnPDF");
+  btn.style.opacity="0.65";
+  btn.innerHTML='<i class="fa-solid fa-spinner fa-spin"></i> Gerando PDF...';
+  await new Promise(r=>setTimeout(r,90));
+
+  const{jsPDF}=window.jspdf;
+  const doc=new jsPDF({unit:"mm",format:"a4"});
+  const W=210,H=297,M=20,CW=W-M*2;
+
+  const RED=[255,0,0],BLACK=[30,30,30],GRAY=[100,100,100],LGRAY=[200,200,200],WHITE=[255,255,255];
+  const GRN=[0,130,60],ORG=[180,90,0],ERR=[180,0,0];
+
+  const sf=(...c)=>doc.setFillColor(...(c.length===1?c[0]:c));
+  const sd=(...c)=>doc.setDrawColor(...(c.length===1?c[0]:c));
+  const st=(...c)=>doc.setTextColor(...(c.length===1?c[0]:c));
+
+  const sm=coletarStatus();
+  const cliente=document.getElementById("cliente").value.trim()||"Não informado";
+  const tecnico=document.getElementById("tecnico").value.trim()||"Não informado";
+  const fiscal=document.getElementById("fiscal").value.trim()||"Não informado";
+  const data=document.getElementById("data").value
+    ?new Date(document.getElementById("data").value+"T12:00:00").toLocaleDateString("pt-BR")
+    :"Não informada";
+  const obsText=document.getElementById("observacoes").value.trim()||"Sem observações.";
+
+  let y=20;
+
+  st(...BLACK); doc.setFont("helvetica","bold"); doc.setFontSize(18);
+  doc.text("RELATÓRIO DE INSTALAÇÃO FIBRA PRO",W/2,y,{align:"center"});
+  y+=5; sd(...LGRAY); doc.setLineWidth(0.3); doc.line(M,y,W-M,y); y+=9;
+
+  st(...BLACK); doc.setFont("helvetica","normal"); doc.setFontSize(11);
+  doc.text("Cliente: "+cliente,M,y); y+=7;
+  doc.text("Técnico: "+tecnico,M,y); y+=7;
+  doc.text("Fiscal: " +fiscal, M,y); y+=7;
+  doc.text("Data: "   +data,   M,y); y+=7;
+
+  let ok=0,no=0,na=0;
+  Object.values(sm).forEach(v=>{if(v==="Sim")ok++;else if(v==="Não")no++;else if(v==="N/A")na++;});
+  const tot=ok+no;
+  const pct=tot>0?Math.round((ok/tot)*100):null;
+  const sClr=pct===null?GRAY:pct>=80?GRN:pct>=50?ORG:ERR;
+  st(...sClr); doc.setFont("helvetica","bold"); doc.setFontSize(11);
+  doc.text("Conformidade: "+(pct!==null?pct+"%":"—")+"   ("+ok+" Sim  ·  "+no+" Não  ·  "+na+" N/A)",M,y);
+  y+=3; sd(...LGRAY); doc.line(M,y,W-M,y); y+=6;
+
+  doc.autoTable({
+    startY:y,
+    head:[["#","Verificação","Status"]],
+    body:verificacoes.map((v,i)=>[i+1,v.label,sm[i]||"---"]),
+    margin:{left:M,right:M},
+    headStyles:{fillColor:RED,textColor:WHITE,fontStyle:"bold",fontSize:10,cellPadding:3},
+    bodyStyles:{fillColor:WHITE,textColor:BLACK,fontSize:10,cellPadding:3},
+    alternateRowStyles:{fillColor:[245,245,245]},
+    columnStyles:{0:{cellWidth:10,halign:"center"},1:{cellWidth:"auto"},2:{cellWidth:22,halign:"center",fontStyle:"bold"}},
+    didParseCell(d){
+      if(d.column.index===2&&d.section==="body"){
+        const v=d.cell.raw;
+        if(v==="Sim")d.cell.styles.textColor=[0,130,60];
+        else if(v==="Não")d.cell.styles.textColor=[180,0,0];
+        else if(v==="N/A")d.cell.styles.textColor=[120,120,120];
+      }
+    },
+    tableLineColor:[200,200,200],tableLineWidth:0.2,
+  });
+  y=doc.lastAutoTable.finalY+10;
+
+  if(y>H-40){doc.addPage();y=20;}
+  st(...BLACK); doc.setFont("helvetica","bold"); doc.setFontSize(11);
+  doc.text("Observações:",M,y); y+=6;
+  const obsLines=doc.splitTextToSize(obsText,W-M*2);
+  st(...BLACK); doc.setFont("helvetica","normal"); doc.setFontSize(10);
+  doc.text(obsLines,M,y); y+=obsLines.length*5+10;
+
+  if(fotos.length>0){
+    if(y>H-75){doc.addPage();y=20;}
+    st(...BLACK); doc.setFont("helvetica","bold"); doc.setFontSize(11);
+    doc.text("Fotos da Instalação:",M,y); y+=6;
+    const fw=80,fh=60,gap=10;
+    for(let i=0;i<fotos.length;i++){
+      const col=i%2;
+      if(col===0&&i>0)y+=fh+gap+(fotos[i-1].endereco?5:0);
+      if(y+fh>H-15){doc.addPage();y=20;}
+      const fx=col===0?M:M+fw+gap;
+      try{doc.addImage(fotos[i].data,"JPEG",fx,y,fw,fh,undefined,"FAST");}catch(e){}
+      if(fotos[i].endereco){
+        const geo=fotos[i].endereco.substring(0,60)+(fotos[i].endereco.length>60?"...":"");
+        st(...GRAY); doc.setFont("helvetica","normal"); doc.setFontSize(6);
+        doc.text("  "+geo,fx,y+fh+4);
+      }
+    }
+    y+=fh+(fotos[fotos.length-1].endereco?9:3)+8;
+  }
+
+  if(y>H-55){doc.addPage();y=20;}
+  sd(...LGRAY); doc.setLineWidth(0.3); doc.line(M,y,W-M,y); y+=8;
+  st(...BLACK); doc.setFont("helvetica","bold"); doc.setFontSize(11);
+  doc.text("Avaliação do Atendimento",M,y); y+=7;
+
+  // Nota da Empresa (1 a 5)
+  st(...BLACK); doc.setFont("helvetica","normal"); doc.setFontSize(9);
+  doc.text("Nota da Empresa (1 a 5):",M,y); y+=5;
+  for(let i=1;i<=5;i++){
+    const clr=i<=notaEmp?[245,197,24]:[180,180,180];
+    st(...clr); doc.setFont("helvetica","normal"); doc.setFontSize(14);
+    doc.text("★",M+(i-1)*8,y);
+  }
+  st(...GRAY); doc.setFont("helvetica","normal"); doc.setFontSize(9);
+  doc.text(notaEmp>0?notaEmp+" / 5":"Não avaliado",M+45,y);
+  y+=10;
+
+  // Nota do Atendimento / Suporte (1 a 10)
+  st(...BLACK); doc.setFontSize(9);
+  doc.text("Nota do Atendimento / Suporte (1 a 10):",M,y); y+=5;
+  for(let i=1;i<=10;i++){
+    const clr=i<=notaAten?[245,197,24]:[180,180,180];
+    st(...clr); doc.setFont("helvetica","normal"); doc.setFontSize(14);
+    doc.text("★",M+(i-1)*8,y);
+  }
+  st(...GRAY); doc.setFont("helvetica","normal"); doc.setFontSize(9);
+  doc.text(notaAten>0?notaAten+" / 10":"Não avaliado",M+85,y);
+  y+=10;
+
+  // Nota do Técnico (1 a 10)
+  st(...BLACK); doc.setFontSize(9);
+  doc.text("Nota do Técnico (1 a 10):",M,y); y+=5;
+  for(let i=1;i<=10;i++){
+    const clr=i<=notaTec?[245,197,24]:[180,180,180];
+    st(...clr); doc.setFont("helvetica","normal"); doc.setFontSize(14);
+    doc.text("★",M+(i-1)*8,y);
+  }
+  st(...GRAY); doc.setFont("helvetica","normal"); doc.setFontSize(9);
+  doc.text(notaTec>0?notaTec+" / 10":"Não avaliado",M+85,y);
+  y+=14;
+
+  if(y>H-70){doc.addPage();y=20;}
+  st(...BLACK); doc.setFont("helvetica","bold"); doc.setFontSize(11);
+  doc.text("Assinatura Digital do Cliente",M,y); y+=6;
+  if(hasSig){
+    const sigData=sigCanvas.toDataURL("image/png");
+    try{doc.addImage(sigData,"PNG",M,y,CW,35);}catch(e){}
+    y+=37;
+  }else{
+    sd(...LGRAY); doc.setLineWidth(0.3); doc.rect(M,y,CW,35);
+    st(...GRAY); doc.setFont("helvetica","normal"); doc.setFontSize(8);
+    doc.text("(Sem assinatura)",W/2,y+18,{align:"center"});
+    y+=37;
+  }
+
+  if(y>H-45){doc.addPage();y=20;}
+  sd(...LGRAY); doc.setLineWidth(0.3); doc.line(M,y,W-M,y); y+=12;
+  const sw=(W-M*2-10)/2;
+  doc.line(M,y,M+sw,y);
+  doc.line(M+sw+10,y,M+sw*2+10,y);
+  y+=5;
+  st(...BLACK); doc.setFont("helvetica","normal"); doc.setFontSize(10);
+  doc.text(tecnico,M+sw/2,y,{align:"center"});
+  doc.text(fiscal,M+sw+10+sw/2,y,{align:"center"});
+  y+=4; st(...GRAY); doc.setFontSize(8);
+  doc.text("Técnico Responsável",M+sw/2,y,{align:"center"});
+  doc.text("Fiscal do Dia",M+sw+10+sw/2,y,{align:"center"});
+
+  const pages=doc.internal.getNumberOfPages();
+  for(let pg=1;pg<=pages;pg++){
+    doc.setPage(pg);
+    sd(...LGRAY); doc.setLineWidth(0.2); doc.line(M,H-12,W-M,H-12);
+    st(...GRAY); doc.setFont("helvetica","normal"); doc.setFontSize(7);
+    doc.text("SilverNet Tecnologia  ·  Ficha Fiscal  ·  Gerado digitalmente em "+new Date().toLocaleString("pt-BR"),M,H-7);
+    doc.text("Página "+pg+" de "+pages,W-M,H-7,{align:"right"});
+  }
+
+  btn.style.opacity="1";
+  btn.innerHTML='<i class="fa-solid fa-file-export"></i> Gerar &amp; Compartilhar PDF';
+  await compartilharPDF(doc);
+  toast("PDF gerado com sucesso!");
+}
+</script>
+</body>
+</html>
