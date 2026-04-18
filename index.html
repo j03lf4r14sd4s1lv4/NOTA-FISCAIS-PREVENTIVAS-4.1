@@ -383,6 +383,17 @@ video { width: 100%; border-radius: 8px; margin-bottom: 10px; display: none; bor
   opacity: 0; transition: opacity .15s;
 }
 .foto-box:hover .btn-del { opacity: 1; }
+.btn-dl {
+  position: absolute; top: 5px; left: 5px;
+  background: rgba(0,0,0,0.72); color: #fff;
+  border: none; border-radius: 50%;
+  width: 20px; height: 20px;
+  cursor: pointer; font-size: 9px;
+  display: flex; align-items: center; justify-content: center;
+  opacity: 0; transition: opacity .15s;
+  text-decoration: none;
+}
+.foto-box:hover .btn-dl { opacity: 1; }
 
 /* ── MAIN BTN ────────────────────────────────── */
 .main-btn {
@@ -606,7 +617,7 @@ video { width: 100%; border-radius: 8px; margin-bottom: 10px; display: none; bor
     <div class="sec-body">
       <div class="stars-wrap">
         <div class="star-group">
-          <span class="slabel">Nota da Empresa (1 a 5)</span>
+          <span class="slabel">Nota da Empresa (1 a 10)</span>
           <div class="stars" id="starsEmp"></div>
           <div class="star-val" id="valEmp">Não avaliado</div>
         </div>
@@ -862,7 +873,7 @@ function updateStars(id,val,valId,max){
   el.style.color=val>=max*0.8?"#22c55e":val>=max*0.5?"#f59e0b":"#f87171";
 }
 
-buildStars("starsEmp",5,"emp","valEmp");
+buildStars("starsEmp",10,"emp","valEmp");
 buildStars("starsAten",10,"aten","valAten");
 buildStars("starsTec",10,"tec","valTec");
 
@@ -1076,7 +1087,7 @@ function processarImagem(file,comOverlay){
       ctx.fillText(endCurto,fs,canvas.height-overlayH*0.06);
     }
     fotos.push({
-      data:canvas.toDataURL("image/jpeg",0.88),
+      data:canvas.toDataURL("image/jpeg",1.0),
       endereco:comOverlay?enderecoFoto:"",
       hora:comOverlay?new Date().toLocaleString("pt-BR"):""
     });
@@ -1099,6 +1110,7 @@ function mostrarPreview(){
       <img src="${foto.data}" onclick="abrirVis(${i})">
       <span class="foto-label">${String(i+1).padStart(2,"0")}</span>
       ${temGeo?`<span class="foto-geo"><i class="fa-solid fa-location-dot" style="font-size:8px"></i></span>`:""}
+      <a class="btn-dl" href="${foto.data}" download="foto_${String(i+1).padStart(2,'0')}.jpg" title="Baixar foto"><i class="fa-solid fa-download"></i></a>
       <button class="btn-del" onclick="delFoto(${i})"><i class="fa-solid fa-xmark"></i></button>`;
     p.appendChild(d);
   });
@@ -1219,17 +1231,15 @@ async function gerarPDF(){
     if(y>H-75){doc.addPage();y=20;}
     st(...BLACK); doc.setFont("helvetica","bold"); doc.setFontSize(11);
     doc.text("Fotos da Instalação:",M,y); y+=6;
-    const fw=80,fh=60,gap=10;
+    const fw=CW, fh=Math.round(CW*0.65), gap=10;
     for(let i=0;i<fotos.length;i++){
-      const col=i%2;
-      if(col===0&&i>0)y+=fh+gap+(fotos[i-1].endereco?5:0);
+      if(i>0) y+=fh+gap+(fotos[i-1].endereco?8:4);
       if(y+fh>H-15){doc.addPage();y=20;}
-      const fx=col===0?M:M+fw+gap;
-      try{doc.addImage(fotos[i].data,"JPEG",fx,y,fw,fh,undefined,"FAST");}catch(e){}
+      try{doc.addImage(fotos[i].data,"JPEG",M,y,fw,fh,undefined,"NONE");}catch(e){}
       if(fotos[i].endereco){
         const geo=fotos[i].endereco.substring(0,60)+(fotos[i].endereco.length>60?"...":"");
         st(...GRAY); doc.setFont("helvetica","normal"); doc.setFontSize(6);
-        doc.text("  "+geo,fx,y+fh+4);
+        doc.text("  "+geo,M,y+fh+4);
       }
     }
     y+=fh+(fotos[fotos.length-1].endereco?9:3)+8;
@@ -1240,16 +1250,16 @@ async function gerarPDF(){
   st(...BLACK); doc.setFont("helvetica","bold"); doc.setFontSize(11);
   doc.text("Avaliação do Atendimento",M,y); y+=7;
 
-  // Nota da Empresa (1 a 5)
+  // Nota da Empresa (1 a 10)
   st(...BLACK); doc.setFont("helvetica","normal"); doc.setFontSize(9);
-  doc.text("Nota da Empresa (1 a 5):",M,y); y+=5;
+  doc.text("Nota da Empresa (1 a 10):",M,y); y+=5;
   for(let i=1;i<=5;i++){
     const clr=i<=notaEmp?[245,197,24]:[180,180,180];
     st(...clr); doc.setFont("helvetica","normal"); doc.setFontSize(14);
     doc.text("★",M+(i-1)*8,y);
   }
   st(...GRAY); doc.setFont("helvetica","normal"); doc.setFontSize(9);
-  doc.text(notaEmp>0?notaEmp+" / 5":"Não avaliado",M+45,y);
+  doc.text(notaEmp>0?notaEmp+" / 10":"Não avaliado",M+85,y);
   y+=10;
 
   // Nota do Atendimento / Suporte (1 a 10)
